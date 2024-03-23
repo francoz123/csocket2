@@ -21,8 +21,8 @@
 #include "protocol.h"
 #include "aes/aes.c" //Source: 
 
-void get_password (char *passsword);
-void get_username (char *username);
+void get_password (char *passsword, int size);
+void get_username (char *username, int size);
 
 int main(int argc, char const* argv[])
 {
@@ -38,7 +38,7 @@ int main(int argc, char const* argv[])
     struct AES_ctx ctx; // Used for aes encryption
     auth_token_t auth; 
     // Program buffers
-    char command[256], username[256], password[256], read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
+    char command[256], /* username[256], password[256], */ read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
     
     // Socket variables
     socket_server_address server_address;
@@ -49,61 +49,9 @@ int main(int argc, char const* argv[])
     AES_init_ctx(&ctx, (uint8_t*) key);
 
     printf("Welcome! Please login to interract with the server\n");
-    // Structs for terminal settings
-    static struct termios old_terminal_settings;
-    static struct termios new_terminal_settings;
-    // Retrieve old settings
-    tcgetattr(STDIN_FILENO, &old_terminal_settings);
-
-    printf("Enter your username: ");
-    if (fgets(username, sizeof(username), stdin) == NULL) {
-        printf("Failed to read usename");
-    } 
-    username[strcspn(username, "\n\r")] = 0; // Remove carriage return
-
-    // Ensures username does not contain space
-    while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
-        printf("Invalid username. Username must not contain spaces.\n");
-        printf("Enter your username: ");
-        
-        if (fgets(username, sizeof(username), stdin) == NULL) {
-            printf("Failed to read password");
-        } 
-        username[strcspn(username, "\n\r")] = 0;
-    }
-
-    
-    new_terminal_settings = old_terminal_settings;
-    // turn off echo
-    new_terminal_settings.c_lflag &= ~(ICANON | ECHO);
-    new_terminal_settings.c_cc[VTIME] = 0;
-    new_terminal_settings.c_cc[VMIN] = 1;
-    // Set terminal option to no echo
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_terminal_settings);
-    // Get password from input
-    printf("Enter your password: ");
-
-    if (fgets(password, sizeof(password), stdin) == NULL) {
-        printf("Failed to read password");
-    } 
-    password[strcspn(password, "\n\r")] = 0;
-
-    // Ensures password does not contain space
-    while (strcspn(password, " ") != strlen(password) || password[0] == '\0') {
-        printf("Invalid sizeofpassword. password must not contain spaces.\n");
-        printf("Enter your password: ");
-
-        if (fgets(password, sizeof(password), stdin) == NULL) {
-            printf("Failed to read password");
-        } 
-        password[strcspn(password, "\n\r")] = 0;
-    }
-    // Retrun terminal to old settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
-    printf("\n"); int x = strlen(password);
+    get_username(auth.username, sizeof(auth.username));
+    get_password(auth.password, sizeof(auth.password));
     // Encrypt username and password
-    strncpy(auth.username, username, sizeof(username));
-    strncpy(auth.password, password, sizeof(password));
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
     
@@ -119,67 +67,20 @@ int main(int argc, char const* argv[])
 		return -1;
 	}
     connect_to_server(client_fd, &server_address, PORT);
-    printf("CONNECTED: You are ready to communicate with the server.\n\n");
 	
     if((read_count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
         perror("Send error\n");
         exit(EXIT_FAILURE);
     }
+
     if ((read_count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
         perror("Read error\n");
         exit(EXIT_FAILURE);
     }
 
-    while (num_msg == -1) {printf("%d\n", num_msg);
-        printf("Login failed\n");
-        printf("Enter your username: ");
-        if (fgets(username, sizeof(username), stdin) == NULL) {
-            printf("Failed to read usename");
-        } 
-        username[strcspn(username, "\n\r")] = 0; // Remove carriage return
-
-        // Ensures username does not contain space
-        while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
-            printf("Invalid username. Username must not contain spaces.\n");
-            printf("Enter your username: ");
-            
-            if (fgets(username, sizeof(username), stdin) == NULL) {
-                printf("Failed to read password");
-            } 
-            username[strcspn(username, "\n\r")] = 0;
-        }
-
-        
-        new_terminal_settings = old_terminal_settings;
-        // turn off echo
-        new_terminal_settings.c_lflag &= ~(ICANON | ECHO);
-        new_terminal_settings.c_cc[VTIME] = 0;
-        new_terminal_settings.c_cc[VMIN] = 1;
-        // Set terminal option to no echo
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_terminal_settings);
-        // Get password from input
-        printf("Enter your password: ");
-
-        if (fgets(password, sizeof(password), stdin) == NULL) {
-            printf("Failed to read password");
-        } 
-        password[strcspn(password, "\n\r")] = 0;
-
-        // Ensures password does not contain space
-        while (strcspn(password, " ") != strlen(password) || password[0] == '\0') {
-            printf("Invalid password. password must not contain spaces.\n");
-            printf("Enter your password: ");
-
-            if (fgets(password, sizeof(password), stdin) == NULL) {
-                printf("Failed to read password");
-            } 
-            password[strcspn(password, "\n\r")] = 0;
-        }
-        // Retrun terminal to old settings
-        tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
-        printf("\n");
-        strncpy(auth.username, username, sizeof(username));
-        strncpy(auth.password, password, sizeof(password));
+    while (num_msg == -1) {
+        get_username(auth.username, sizeof(auth.username));
+        get_password(auth.password, sizeof(auth.password));     
         // Encrypt username and password
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
@@ -192,11 +93,9 @@ int main(int argc, char const* argv[])
             perror("Read error\n");
             exit(EXIT_FAILURE);
         }
-
     }
     
     printf("- You have %d unread message(s)\n", num_msg);
-
     char *rest; // input left in buffer after command string
 
     while (1) {
@@ -264,31 +163,32 @@ int main(int argc, char const* argv[])
         }
         
     }
-
 	// closing the connected socket
 	close(client_fd);
 	return 0;
 }
 
-void get_username(char *username)
+void get_username(char *username, int size)
 {
     printf("Enter your username: ");
-    if (fgets(username, sizeof(username), stdin) == NULL) {
+    if (fgets(username, size, stdin) == NULL) {
         printf("Failed to read usename");
-    } else username[strcspn(username, "\n\r")] = 0; // Remove carriage return
-
+    }
+    username[strcspn(username, "\n\r")] = 0; // Remove carriage return
+printf("%s\n", username);
     // Ensures username does not contain space
     while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
         printf("Invalid username. Username must not contain spaces.\n");
         printf("Enter your username: ");
         
-        if (fgets(username, sizeof(username), stdin) == NULL) {
+        if (fgets(username, size, stdin) == NULL) {
             printf("Failed to read password");
-        } else username[strcspn(username, "\n\r")] = 0;
+        } 
+        username[strcspn(username, "\n\r")] = 0;
     }
 }
 
-void get_password(char *password) 
+void get_password(char *password, int size) 
 {
     // Structs for terminal settings
     static struct termios old_terminal_settings;
@@ -305,7 +205,7 @@ void get_password(char *password)
     // Get password from input
     printf("Enter your password: ");
 
-    if (fgets(password, sizeof(password), stdin) == NULL) {
+    if (fgets(password, size, stdin) == NULL) {
         printf("Failed to read password");
     }
     password[strcspn(password, "\n\r")] = 0;
@@ -315,7 +215,7 @@ void get_password(char *password)
         printf("Invalid sizeof(password). Username must not contain spaces.\n");
         printf("Enter your password: ");
 
-        if (fgets(password, sizeof(password), stdin) == NULL) {
+        if (fgets(password, size, stdin) == NULL) {
             printf("Failed to read password");
         } 
         password[strcspn(password, "\n\r")] = 0;

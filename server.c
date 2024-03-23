@@ -106,7 +106,6 @@ int main(int argc, char* argv[])
 			save_database(&head); // Save messages
             exit(EXIT_FAILURE);
         } 
-		//buffer[strlen(buffer)-1] = 0;
 		buffer[strcspn(buffer, "\n\r")] = 0;
 		sscanf(buffer, "%s %n", command, &n);
 		rest  = buffer + n;
