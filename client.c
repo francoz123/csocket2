@@ -33,14 +33,12 @@ int main(int argc, char const* argv[])
 
 	int n, num_msg, client_fd, PORT = atoi(argv[2]); 
     ssize_t read_count;
-	char buffer[1024] = { 0 };
+	char *host_IP, buffer[1024] = { 0 }, key[] = "7R5dPbNj!#h@a2Fk"; // Encryption key
     const char *host = argv[1]; // Set host name from args
-    char *host_IP;
     struct AES_ctx ctx; // Used for aes encryption
-    char key[] = "7R5dPbNj!#h@a2Fk";
-    auth_token_t auth;
+    auth_token_t auth; 
     // Program buffers
-    char command[256], username[256], password[256], read_cmd[4] = "READ", compose_cmd[] = "COMPOSE";
+    char command[256], username[256], password[256], read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
     
     // Socket variables
     socket_server_address server_address;
@@ -61,7 +59,7 @@ int main(int argc, char const* argv[])
     if (fgets(username, sizeof(username), stdin) == NULL) {
         printf("Failed to read usename");
     } 
-    username[strlen(username)-1] = 0; // Remove carriage return
+    username[strcspn(username, "\n\r")] = 0; // Remove carriage return
 
     // Ensures username does not contain space
     while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
@@ -71,7 +69,7 @@ int main(int argc, char const* argv[])
         if (fgets(username, sizeof(username), stdin) == NULL) {
             printf("Failed to read password");
         } 
-        username[strlen(username)-1] = 0;
+        username[strcspn(username, "\n\r")] = 0;
     }
 
     
@@ -88,7 +86,7 @@ int main(int argc, char const* argv[])
     if (fgets(password, sizeof(password), stdin) == NULL) {
         printf("Failed to read password");
     } 
-    password[strlen(password)-1] = 0;
+    password[strcspn(password, "\n\r")] = 0;
 
     // Ensures password does not contain space
     while (strcspn(password, " ") != strlen(password) || password[0] == '\0') {
@@ -98,7 +96,7 @@ int main(int argc, char const* argv[])
         if (fgets(password, sizeof(password), stdin) == NULL) {
             printf("Failed to read password");
         } 
-        password[strlen(password)-1] = 0;
+        password[strcspn(password, "\n\r")] = 0;
     }
     // Retrun terminal to old settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
@@ -106,13 +104,9 @@ int main(int argc, char const* argv[])
     // Encrypt username and password
     strncpy(auth.username, username, sizeof(username));
     strncpy(auth.password, password, sizeof(password));
-    printf("%s %d\n", password, x);
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
-    //auth_token_t auth;
-    //char login[]= "LOGIN";
-    //sprintf(buffer, "%s:%s:%s" ,login, username, password);
-    printf("%s\n", auth.password);
+    
     // Get host IP
     struct hostent *host_info = gethostbyname(host);
     host_IP = inet_ntoa(*((struct in_addr*) host_info->h_addr_list[0]));
@@ -142,7 +136,7 @@ int main(int argc, char const* argv[])
         if (fgets(username, sizeof(username), stdin) == NULL) {
             printf("Failed to read usename");
         } 
-        username[strlen(username)-1] = 0; // Remove carriage return
+        username[strcspn(username, "\n\r")] = 0; // Remove carriage return
 
         // Ensures username does not contain space
         while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
@@ -152,7 +146,7 @@ int main(int argc, char const* argv[])
             if (fgets(username, sizeof(username), stdin) == NULL) {
                 printf("Failed to read password");
             } 
-            username[strlen(username)-1] = 0;
+            username[strcspn(username, "\n\r")] = 0;
         }
 
         
@@ -169,7 +163,7 @@ int main(int argc, char const* argv[])
         if (fgets(password, sizeof(password), stdin) == NULL) {
             printf("Failed to read password");
         } 
-        password[strlen(password)-1] = 0;
+        password[strcspn(password, "\n\r")] = 0;
 
         // Ensures password does not contain space
         while (strcspn(password, " ") != strlen(password) || password[0] == '\0') {
@@ -179,7 +173,7 @@ int main(int argc, char const* argv[])
             if (fgets(password, sizeof(password), stdin) == NULL) {
                 printf("Failed to read password");
             } 
-            password[strlen(password)-1] = 0;
+            password[strcspn(password, "\n\r")] = 0;
         }
         // Retrun terminal to old settings
         tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
