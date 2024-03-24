@@ -246,7 +246,7 @@ int find_user(char *username, char *password)
 
     if ((fd = fopen("users", "r")) == NULL) {
         perror("Failed to open file\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     // Find user
     while ((read_value = fread(&user, sizeof(user_t), 1, fd)) != 0){
@@ -261,5 +261,24 @@ int find_user(char *username, char *password)
 
     fclose(fd);
     return 0;
+}
+
+void add_user(char *username, char *password)
+{
+    FILE *fd;
+    user_t user = {username, password};
+    size_t read_value;
+
+    if ((fd = fopen("users", "a")) == NULL) {
+        perror("Failed to open file\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fwrite(&user, sizeof(user_t), 1, fd) < 0) {
+        perror("Wrote error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fclose (fd);
 }
 #endif

@@ -20,11 +20,13 @@
 typedef struct sockaddr_in socket_server_address;
 typedef struct sockaddr* socket_address_ptr;
 
+typedef enum authentication_type {login, signup} auth_type;
+
 typedef struct auth_token {
+	auth_type type;
 	char username[256];
 	char password[256];
 }auth_token_t ;
-
 
 /**
  * Creates a socket
