@@ -266,8 +266,9 @@ int find_user(char *username, char *password)
 void add_user(char *username, char *password)
 {
     FILE *fd;
-    user_t user = {username, password};
-    size_t read_value;
+    user_t user;
+    strcpy(user.username, username);
+    strcpy(user.password, password);
 
     if ((fd = fopen("users", "a")) == NULL) {
         perror("Failed to open file\n");

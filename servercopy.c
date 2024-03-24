@@ -16,7 +16,7 @@
 int main(int argc, char* argv[])
 {
 	if (argc != 2) { // Ensures port number is supplied
-		printf("Usage: %s <IP address> <port>\n", argv[0]);
+		printf("Usage: %s <port>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
@@ -33,11 +33,9 @@ int main(int argc, char* argv[])
 	// Initialize ctx
     AES_init_ctx(&ctx, (uint8_t*) key);
 	// Buffers
-	char username[256], password[256], command[26], read_cmd[4] = "READ", compose_cmd[] = "COMPOSE";
-
+	char username[256], password[256], command[26], read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
 	message_node_t *head, *tail, *cursur;
 	head = tail = cursur = 0;
-
     server_fd = create_socket();
     bind_socket(server_fd, &server_address, PORT); // Bind port
 
@@ -52,9 +50,11 @@ int main(int argc, char* argv[])
 		perror("Failed to establish connection.");
 		exit(EXIT_FAILURE);
 	}
+
 	printf("Connection established.\n");
 	ssize_t count;
 	auth_token_t auth;
+    
 	if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
 		perror("Read error");
 		exit(EXIT_FAILURE);
@@ -92,42 +92,62 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-    const char* exit_str = "EXIT";
 	char recipient[256], *rest;
-
+	
     while (1) {
 		//Reset input and command buffers
-		memset(buffer, '\0', sizeof(buffer));
-		memset(command, 0, sizeof(command));
+		fprintf(stderr,"1 CMD:%s FLG:%d BUFF:%s\n", command, compose_flag, buffer);
+		memset(buffer, 0, BUFFER_SIZE); 
+		fprintf(stderr,"2 CMD:%s FLG:%d BUFF:%s\n", command, compose_flag, buffer);
 
-        if ((count = read(client_fd, buffer, BUFFER_SIZE)) < 0) {
+		memset(command, 0, sizeof(command));
+		count = read(client_fd, buffer, BUFFER_SIZE-1);
+
+        if (count < 0) {
             perror("Read error from server");
 			save_database(&head); // Save messages
             exit(EXIT_FAILURE);
         } 
-		buffer[strcspn(buffer, "\n\r")] = 0;
+
+		if (count == 0) {
+            perror("Connection closed.");
+			save_database(&head); // Save messages
+            exit(EXIT_FAILURE);
+        } 
+
+		//buffer[strcspn(buffer, "\n\r")] = 0;
 		sscanf(buffer, "%s %n", command, &n);
 		rest  = buffer + n;
-        if (strcmp(buffer, exit_str) == 0) break;
+fprintf(stderr,"3 CMD:%s FLG:%d BUFF:%s REST:%s\n", command, compose_flag, buffer, rest);
+
+        if (strcmp(buffer, "EXIT") == 0) break;
 		// READ command action - retrieve next message for user if available
-		if (strncmp(command, read_cmd, sizeof(read_cmd)) == 0 && strlen(rest) == 0) {
-			/* cursur = head;
-			while (cursur && strcmp(cursur->message->recipient, username) != 0) {
-				cursur = cursur->next;
-			}
-
-			if (cursur) {// Copy message details to buffer and send to client
-				strcpy(buffer, cursur->message->sender);
-				strcat(buffer, ": ");
-				strcat(buffer, cursur->message->message);
-				send(client_fd, buffer, BUFFER_SIZE, 0);
-				remove_node(&head, &tail, &cursur);
-			} else send(client_fd, "READ ERROR", sizeof("READ ERROR"), 0); */
+		if (strcmp(command, read_cmd) == 0 && strlen(rest) == 0) {
+			//memset(buffer, '\0', BUFFER_SIZE);
 			if ((n = read_next_message(&head, &cursur, username, buffer)) == 1) {
-				send(client_fd, buffer, BUFFER_SIZE, 0);
+				if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
+					perror("Send error\n");
+					exit(EXIT_FAILURE);
+				}
 				remove_node(&head, &tail, &cursur);
-			} else send(client_fd, "READ ERROR", sizeof("READ ERROR"), 0); // No message
+				/* char sender[256], message[512];
+				sscanf(buffer, "%s %s", sender, message);
+				sender[strlen(sender)] = 0;
+				strcat(buffer, " read your message - ");
+				strcat(buffer, message);
 
+				if (!save_message(sender, username, buffer, &head, &tail)) { // Ensure meaage was sent
+					printf("Save error");
+					exit(EXIT_FAILURE);
+				} */
+			} else { // No message
+				strcpy(buffer, "READ ERROR");
+				if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
+					perror("Send error\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+			rest = 0;
 			compose_flag = 0; // Toggle compose flage off
 			continue;
 		} else if(strcmp(command, compose_cmd) == 0) {
@@ -137,30 +157,19 @@ int main(int argc, char* argv[])
 		} 
 
 		if (compose_flag == 1) {// Expecting message for the recipient
-			// Create and save message node
-			/* if (!head) {
-				head = tail = create_node();
-				head->message = (message_t*)malloc(sizeof(message_t));
-				head->next = 0;
-				strcpy(head->message->sender, username);
-				strcpy(head->message->recipient, recipient);
-				strcpy(head->message->message, buffer);
-			}else {
-				message_node_t *temp = (message_node_t*)malloc(sizeof(message_node_t));
-				temp->message = (message_t*)malloc(sizeof(message_t));
-				strcpy(temp->message->sender, username);
-				strcpy(temp->message->recipient, recipient);
-				strcpy(temp->message->message, buffer);
-				temp->next = 0;
-				tail->next = temp;
-				tail = temp;
-			} */
+			// Save message node
 			if (save_message(username, recipient, buffer, &head, &tail)) { // Ensure meaage was sent
-				strcpy(buffer, "MESSAGE SENT");
-				send(client_fd, buffer, BUFFER_SIZE, 0);
+				send(client_fd, "MESSAGE SENT", sizeof("MESSAGE SENT"), 0);
+				if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
+					perror("Send error\n");
+					exit(EXIT_FAILURE);
+				}
 			}else send(client_fd, "MESSAGE FAILED", sizeof("MESSAGE FAILED"), 0);
 		} else { // Bad command received
-			send(client_fd, "ERROR", sizeof("ERROR"), 0);
+			if ((count = send(client_fd, "ERROR", sizeof("ERROR"), 0)) == -1) {
+                perror("Send error\n");
+                exit(EXIT_FAILURE);
+            }
 			break;
 		}
     }

@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h> 
 #include <netdb.h>
+#include "protocol.h"
 #include <termios.h> // For terminal settings
 #include "protocol.h"
 #include "aes/aes.c" //Source: 
@@ -33,13 +34,13 @@ int main(int argc, char const* argv[])
 
 	int n, num_msg, client_fd, PORT = atoi(argv[2]); 
     ssize_t count;
-	char *host_IP, buffer[1024] = { 0 }, key[] = "7R5dPbNj!#h@a2Fk"; // Encryption key
+	char buffer[1024] = { 0 }, key[] = "7R5dPbNj!#h@a2Fk"; // Encryption key
     const char *host = argv[1]; // Set host name from args
+    char *host_IP;
     struct AES_ctx ctx; // Used for aes encryption
     auth_token_t auth; 
     // Program buffers
-    char command[256], read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
-    
+    char command[256], read_cmd[4] = "READ", compose_cmd[] = "COMPOSE";
     // Socket variables
     socket_server_address server_address;
 	server_address.sin_family = AF_INET;
@@ -54,11 +55,10 @@ int main(int argc, char const* argv[])
     // Encrypt username and password
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
-    
     // Get host IP
     struct hostent *host_info = gethostbyname(host);
     host_IP = inet_ntoa(*((struct in_addr*) host_info->h_addr_list[0]));
-    
+   
     // Initialize socket and connect to server
 	client_fd = create_socket(); 
 	// Convert IPv4 and IPv6 addresses from text to binary form
@@ -79,6 +79,7 @@ int main(int argc, char const* argv[])
     }
 
     while (num_msg == -1) {
+        printf("Login failed\n");
         get_username(auth.username, sizeof(auth.username));
         get_password(auth.password, sizeof(auth.password));     
         // Encrypt username and password
@@ -96,12 +97,13 @@ int main(int argc, char const* argv[])
     }
     
     printf("- You have %d unread message(s)\n", num_msg);
+
     char *rest; // input left in buffer after command string
 
     while (1) {
-        memset(buffer, 0, BUFFER_SIZE); //Reset buffer
+        memset(buffer, 0, sizeof(buffer)); //Reset buffer
         printf(">>> ");
-        fgets(buffer, BUFFER_SIZE, stdin);
+        fgets(buffer, sizeof(buffer), stdin);
         buffer[strcspn(buffer, "\n\r")] = 0;
         sscanf(buffer, "%s %n", command, &n);
         rest = buffer + n;
@@ -111,21 +113,17 @@ int main(int argc, char const* argv[])
             break;
         }
         // READ command
-        if (strcmp(command, read_cmd) == 0) {
+        if (strncmp(command, read_cmd, strlen(read_cmd)) == 0) {
             while (strcmp(command, read_cmd) == 0 && strcmp(buffer, read_cmd) != 0){
                 printf("Invalid READ command. Usage: READ\n");
                 printf(">>> ");
-                fgets(buffer, BUFFER_SIZE, stdin);
-                buffer[strcspn(buffer, "\n\r")] = 0;
+                fgets(buffer, sizeof(buffer), stdin);
                 sscanf(buffer, "%s", command);
             }
 
             if (strcmp(command, read_cmd) == 0) {
-                if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
-                    perror("Send error\n");
-                    exit(EXIT_FAILURE);
-                }
-                count = read(client_fd, buffer, BUFFER_SIZE-1); 
+                send(client_fd, buffer, strlen(buffer), 0);
+                count = read(client_fd, buffer, BUFFER_SIZE); 
                 if (count < 0) {
                     printf("Read error\n");
                     exit(EXIT_FAILURE);
@@ -134,7 +132,7 @@ int main(int argc, char const* argv[])
                 } else printf("- %s\n", buffer);
             }
         }
-        if (strncmp(command, compose_cmd, strlen(compose_cmd)) == 0) {
+        if ((strncmp(command, compose_cmd, strlen(compose_cmd)) == 0)) {
             while (strcmp(compose_cmd, command) == 0  && (strcspn(rest, " ") != strlen(rest) || rest[0] == '\0')) {
                 printf("Invalid command or username contain space(s). Usage: COMPOSE <username>\n");
                 printf(">>> ");
@@ -143,16 +141,10 @@ int main(int argc, char const* argv[])
                 buffer[strcspn(buffer, "\n\r")] = 0;
                 rest = buffer + n;
             }
-            if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
-                perror("Send error\n");
-                exit(EXIT_FAILURE);
-            }
+            send(client_fd, buffer, BUFFER_SIZE, 0);
         } else {// Probable message
-            if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
-                perror("Send error\n");
-                exit(EXIT_FAILURE);
-            }
-            count = read(client_fd, buffer, BUFFER_SIZE-1); 
+            send(client_fd, buffer, BUFFER_SIZE, 0);
+            count = read(client_fd, buffer, BUFFER_SIZE); 
             if (count < 0) {
                 printf("Read error\n");
                 exit(EXIT_FAILURE);
@@ -163,6 +155,7 @@ int main(int argc, char const* argv[])
         }
         
     }
+
 	// closing the connected socket
 	close(client_fd);
 	return 0;
