@@ -67,3 +67,42 @@ printf("%s ", t2);
 //strcpy(ct,pt);
 printf("finished");
 }
+
+else if (opt == 2) {
+                char cp[256];
+                printf("Enter q to return to options.\n");
+                get_username(username, size);
+                
+                if (strcmp(username, "q") == 0) {
+                    opt = 0;
+                    continue;
+                }
+                get_password(password, size);
+                if (strcmp(password, "q") == 0) {
+                    opt = 0;
+                    continue;
+                }
+                printf("Enter password again to confirm password.\n");
+                get_password(cp, size);
+
+                if (strcmp(cp, "q") == 0) {
+                    opt = 0;
+                    continue;
+                }
+                while (strcmp(password, cp) != 0){
+                    printf("Passwords do not match.\n");
+                        if (strcmp(password, "q") == 0) {
+                        opt = 0;
+                        continue;
+                    }
+                    printf("Enter password again to confirm password.\n");
+                    get_password(cp, size);
+
+                    if (strcmp(cp, "q") == 0) {
+                        opt = 0;
+                        continue;
+                    }
+                }
+
+                (*auth)->type = signup;
+            }

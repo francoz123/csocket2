@@ -24,6 +24,8 @@
 
 void get_password (char *passsword, int size);
 void get_username (char *username, int size);
+void get_user_info(char *password, char *username, int size, auth_token_t** auth);
+int get_choice();
 
 int main(int argc, char const* argv[])
 {
@@ -48,10 +50,11 @@ int main(int argc, char const* argv[])
 
     // Initialize ctx
     AES_init_ctx(&ctx, (uint8_t*) key);
-
+    auth_token_t *auth_ptr = &auth;
     printf("Welcome! Please login to interract with the server\n");
-    get_username(auth.username, sizeof(auth.username));
-    get_password(auth.password, sizeof(auth.password));
+    /* get_username(auth.username, sizeof(auth.username));
+    get_password(auth.password, sizeof(auth.password)); */
+    get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
     // Encrypt username and password
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
@@ -80,8 +83,9 @@ int main(int argc, char const* argv[])
 
     while (num_msg == -1) {
         printf("Login failed\n");
-        get_username(auth.username, sizeof(auth.username));
-        get_password(auth.password, sizeof(auth.password));     
+        /* get_username(auth.username, sizeof(auth.username));
+        get_password(auth.password, sizeof(auth.password));  */    
+        get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
         // Encrypt username and password
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
@@ -170,7 +174,7 @@ void get_username(char *username, int size)
     username[strcspn(username, "\n\r")] = 0; // Remove carriage return
     // Ensures username does not contain space
     while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
-        printf("Invalid username. Username must not contain spaces.\n");
+        printf("Invalid username. Username must not contain spaces or be empty.\n");
         printf("Enter your username: ");
         
         if (fgets(username, size, stdin) == NULL) {
@@ -215,4 +219,76 @@ void get_password(char *password, int size)
     // Retrun terminal to old settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
     printf("\n");
+}
+
+void get_user_info(char *username, char *password, int size,  auth_token_t** auth)
+{
+    int opt;
+    int return_to_options = 0;
+    while (!return_to_options) {
+        opt  = get_choice();
+        if (opt == 1) {
+            printf("Enter q to return to options.\n");
+            get_username(username, size);
+            if (strcmp(username, "q") == 0) continue;
+            get_password(password, size);
+            if (strcmp(password, "q") == 0) continue;
+            (*auth)->type = login;
+        } 
+
+        if (opt == 2) {
+            char cp[256];
+            printf("Enter q to return to options.\n");
+            get_username(username, size);
+            if (strcmp(username, "q") == 0) continue;
+            get_password(password, size);
+            if (strcmp(password, "q") == 0) continue;
+            printf("Enter password again to confirm password.\n");
+            get_password(cp, size);
+            if (strcmp(cp, "q") == 0) continue;
+            while (strcmp(password, cp) != 0){
+                printf("Passwords do not match.\n");
+                get_password(password, size);
+                if (strcmp(password, "q") == 0) {
+                    return_to_options =1;
+                    break;
+                }
+                printf("Enter password again to confirm password.\n");
+                get_password(cp, size);
+                if (strcmp(cp, "q") == 0) {
+                    return_to_options =1;
+                    break;
+                }
+
+                if (strcmp(cp, "q") == 0) continue;
+            }
+            (*auth)->type = signup;
+        } 
+        return_to_options = !return_to_options;
+    }
+    
+}
+
+int get_choice()
+{
+    int opt = 0;
+    char input[256], err_msg[256] = "Invalid option. Try again\n\n";
+    char user_msg[256] = "Select option by typing the option number and pressing enter\n";
+    char *msg = user_msg;
+    printf("%s", user_msg);
+    printf("1. Login\n2. Register\n3. Exit\n\nEnter option: ");
+    fgets(input, 256, stdin);
+    sscanf(input,"%d", &opt);
+    
+    if (opt == 3) exit(EXIT_SUCCESS);
+
+    while (opt != 1 && opt != 2) {
+        msg = err_msg;
+        printf("%s", msg);
+        printf("1. Login\n2. Register\n3. Exit\nEnter option: ");
+        scanf("%d", &opt);
+    }
+
+    printf("\n");
+    return opt;
 }
