@@ -32,13 +32,13 @@ int main(int argc, char const* argv[])
 	}
 
 	int n, num_msg, client_fd, PORT = atoi(argv[2]); 
-    ssize_t read_count;
+    ssize_t count;
 	char *host_IP, buffer[1024] = { 0 }, key[] = "7R5dPbNj!#h@a2Fk"; // Encryption key
     const char *host = argv[1]; // Set host name from args
     struct AES_ctx ctx; // Used for aes encryption
     auth_token_t auth; 
     // Program buffers
-    char command[256], /* username[256], password[256], */ read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
+    char command[256], read_cmd[] = "READ", compose_cmd[] = "COMPOSE";
     
     // Socket variables
     socket_server_address server_address;
@@ -68,12 +68,12 @@ int main(int argc, char const* argv[])
 	}
     connect_to_server(client_fd, &server_address, PORT);
 	
-    if((read_count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+    if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
         perror("Send error\n");
         exit(EXIT_FAILURE);
     }
 
-    if ((read_count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+    if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
         perror("Read error\n");
         exit(EXIT_FAILURE);
     }
@@ -85,11 +85,11 @@ int main(int argc, char const* argv[])
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
 
-        if((read_count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+        if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
             perror("Send error\n");
             exit(EXIT_FAILURE);
         }
-        if ((read_count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+        if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
             perror("Read error\n");
             exit(EXIT_FAILURE);
         }
@@ -111,7 +111,7 @@ int main(int argc, char const* argv[])
             break;
         }
         // READ command
-        if (strncmp(command, read_cmd, strlen(read_cmd)) == 0) {
+        if (strcmp(command, read_cmd) == 0) {
             while (strcmp(command, read_cmd) == 0 && strcmp(buffer, read_cmd) != 0){
                 printf("Invalid READ command. Usage: READ\n");
                 printf(">>> ");
@@ -121,20 +121,20 @@ int main(int argc, char const* argv[])
             }
 
             if (strcmp(command, read_cmd) == 0) {
-                if ((read_count = send(client_fd, buffer, BUFFER_SIZE, 0)) == -1) {
+                if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
                     perror("Send error\n");
                     exit(EXIT_FAILURE);
                 }
-                read_count = read(client_fd, buffer, BUFFER_SIZE); 
-                if (read_count < 0) {
+                count = read(client_fd, buffer, BUFFER_SIZE-1); 
+                if (count < 0) {
                     printf("Read error\n");
                     exit(EXIT_FAILURE);
-                } else if (read_count == 0){
+                } else if (count == 0){
                     printf("Connection closed by server.\n");
                 } else printf("- %s\n", buffer);
             }
         }
-        if ((strncmp(command, compose_cmd, strlen(compose_cmd)) == 0)) {
+        if (strncmp(command, compose_cmd, strlen(compose_cmd)) == 0) {
             while (strcmp(compose_cmd, command) == 0  && (strcspn(rest, " ") != strlen(rest) || rest[0] == '\0')) {
                 printf("Invalid command or username contain space(s). Usage: COMPOSE <username>\n");
                 printf(">>> ");
@@ -143,20 +143,20 @@ int main(int argc, char const* argv[])
                 buffer[strcspn(buffer, "\n\r")] = 0;
                 rest = buffer + n;
             }
-            if ((read_count = send(client_fd, buffer, BUFFER_SIZE, 0)) == -1) {
+            if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
         } else {// Probable message
-            if ((read_count = send(client_fd, buffer, BUFFER_SIZE, 0)) == -1) {
+            if ((count = send(client_fd, buffer, strlen(buffer), 0)) == -1) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
-            read_count = read(client_fd, buffer, BUFFER_SIZE); 
-            if (read_count < 0) {
+            count = read(client_fd, buffer, BUFFER_SIZE-1); 
+            if (count < 0) {
                 printf("Read error\n");
                 exit(EXIT_FAILURE);
-            } else if (read_count == 0){
+            } else if (count == 0){
                 printf("Connection closed by server.\n");
                 exit(EXIT_FAILURE);
             } else printf("- %s\n", buffer);
@@ -175,7 +175,6 @@ void get_username(char *username, int size)
         printf("Failed to read usename");
     }
     username[strcspn(username, "\n\r")] = 0; // Remove carriage return
-printf("%s\n", username);
     // Ensures username does not contain space
     while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
         printf("Invalid username. Username must not contain spaces.\n");

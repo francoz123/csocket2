@@ -13,10 +13,10 @@
 
 int main()
 {
-    char username[256] = "username";
-    char password[256] = "password";
+    char username[256] = "U";
+    char password[256] = "P";
     FILE *fd;
-    user_t user = {"username", "password"};
+    user_t user = {"U", "P"};
     size_t read_value;
 
     if ((fd = fopen("users", "a")) == NULL) {
