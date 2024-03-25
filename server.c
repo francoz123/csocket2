@@ -109,30 +109,22 @@ int main(int argc, char* argv[])
 			save_database(&head); // Save messages
             exit(EXIT_FAILURE);
         } 
+		AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 		buffer[strcspn(buffer, "\n\r")] = 0;
 		sscanf(buffer, "%s %n", command, &n);
 		rest  = buffer + n;
         if (strcmp(buffer, exit_str) == 0) break;
 		// READ command action - retrieve next message for user if available
 		if (strncmp(command, read_cmd, sizeof(read_cmd)) == 0 && strlen(rest) == 0) {
-			/* cursur = head;
-			while (cursur && strcmp(cursur->message->recipient, username) != 0) {
-				cursur = cursur->next;
-			}
-
-			if (cursur) {// Copy message details to buffer and send to client
-				strcpy(buffer, cursur->message->sender);
-				strcat(buffer, ": ");
-				strcat(buffer, cursur->message->message);
-				send(client_fd, buffer, BUFFER_SIZE, 0);
-				remove_node(&head, &tail, &cursur);
-			} else send(client_fd, "READ ERROR", sizeof("READ ERROR"), 0); */
+			
 			if ((n = read_next_message(&head, &cursur, username, buffer)) == 1) {
+				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 				send(client_fd, buffer, BUFFER_SIZE, 0);
 				remove_node(&head, &tail, &cursur);
+				AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 				char sender[256], msg[512];
-				sscanf(buffer, "%s: %n", sender, &n);
-				strcpy(msg,buffer + n);
+				sscanf(buffer, "%s %n", sender, &n);
+				strcpy(msg, (buffer + n));
 				strcpy(buffer, "[ ");
 				strcat(buffer, username);
 				strcat(buffer, " read your message: ");
@@ -140,7 +132,11 @@ int main(int argc, char* argv[])
 				strcat(buffer, " ]");
 				sender[strlen(sender)-1] = 0;
 				save_message("NOTIFICATION", sender, buffer, &head, &tail);
-			} else send(client_fd, "READ ERROR", sizeof("READ ERROR"), 0); // No message
+			} else {
+				strcpy(buffer, "READ ERROR");
+				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
+				send(client_fd, buffer, BUFFER_SIZE, 0);
+			} // No message
 
 			compose_flag = 0; // Toggle compose flage off
 			continue;
@@ -151,30 +147,16 @@ int main(int argc, char* argv[])
 		} 
 
 		if (compose_flag == 1) {// Expecting message for the recipient
-			// Create and save message node
-			/* if (!head) {
-				head = tail = create_node();
-				head->message = (message_t*)malloc(sizeof(message_t));
-				head->next = 0;
-				strcpy(head->message->sender, username);
-				strcpy(head->message->recipient, recipient);
-				strcpy(head->message->message, buffer);
-			}else {
-				message_node_t *temp = (message_node_t*)malloc(sizeof(message_node_t));
-				temp->message = (message_t*)malloc(sizeof(message_t));
-				strcpy(temp->message->sender, username);
-				strcpy(temp->message->recipient, recipient);
-				strcpy(temp->message->message, buffer);
-				temp->next = 0;
-				tail->next = temp;
-				tail = temp;
-			} */
+			
 			if (save_message(username, recipient, buffer, &head, &tail)) { // Ensure meaage was sent
 				strcpy(buffer, "MESSAGE SENT");
+				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 				send(client_fd, buffer, BUFFER_SIZE, 0);
 			}else send(client_fd, "MESSAGE FAILED", sizeof("MESSAGE FAILED"), 0);
 		} else { // Bad command received
-			send(client_fd, "ERROR", sizeof("ERROR"), 0);
+			strcpy(buffer, "ERROR");
+			AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
+			send(client_fd, "ERROR",BUFFER_SIZE, 0);
 			break;
 		}
     }

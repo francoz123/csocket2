@@ -117,6 +117,7 @@ int main(int argc, char const* argv[])
         rest = buffer + n;
 
         if (strncmp(buffer, "EXIT", 4) == 0) {// Exit on EXIT command
+            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
             send(client_fd, "EXIT", sizeof("EXIT"), 0);
             break;
         }
@@ -130,8 +131,10 @@ int main(int argc, char const* argv[])
             }
 
             if (strcmp(command, read_cmd) == 0) {
+                AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
                 send(client_fd, buffer, strlen(buffer), 0);
                 count = read(client_fd, buffer, BUFFER_SIZE); 
+                AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
                 if (count < 0) {
                     printf("Read error\n");
                     exit(EXIT_FAILURE);
@@ -149,10 +152,13 @@ int main(int argc, char const* argv[])
                 buffer[strcspn(buffer, "\n\r")] = 0;
                 rest = buffer + n;
             }
+            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
             send(client_fd, buffer, BUFFER_SIZE, 0);
         } else {// Probable message
+            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
             send(client_fd, buffer, BUFFER_SIZE, 0);
-            count = read(client_fd, buffer, BUFFER_SIZE); 
+            count = read(client_fd, buffer, BUFFER_SIZE);
+            AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
             if (count < 0) {
                 printf("Read error\n");
                 exit(EXIT_FAILURE);
