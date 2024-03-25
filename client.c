@@ -17,15 +17,18 @@
 #include <arpa/inet.h>
 #include <netinet/in.h> 
 #include <netdb.h>
+#include <ctype.h>
 #include "protocol.h"
 #include <termios.h> // For terminal settings
 #include "protocol.h"
 #include "aes/aes.c" //Source: 
 
 void get_password (char *passsword, int size);
+void get_password2 (char *passsword, int size);
 void get_username (char *username, int size);
 void get_user_info(char *password, char *username, int size, auth_token_t** auth);
 int get_choice();
+int strong_password(char *password);
 
 int main(int argc, char const* argv[])
 {
@@ -171,6 +174,7 @@ void get_username(char *username, int size)
     if (fgets(username, size, stdin) == NULL) {
         printf("Failed to read usename");
     }
+    username[size - 1] = 0;
     username[strcspn(username, "\n\r")] = 0; // Remove carriage return
     // Ensures username does not contain space
     while (strcspn(username, " ") != strlen(username) || username[0] == '\0') {
@@ -180,8 +184,10 @@ void get_username(char *username, int size)
         if (fgets(username, size, stdin) == NULL) {
             printf("Failed to read password");
         } 
+        username[size - 1] = 0;
         username[strcspn(username, "\n\r")] = 0;
     }
+    printf("\n");
 }
 
 void get_password(char *password, int size) 
@@ -199,23 +205,67 @@ void get_password(char *password, int size)
     // Set terminal option to no echo
     tcsetattr(STDIN_FILENO, TCSANOW, &new_terminal_settings);
     // Get password from input
-    printf("Enter your password: ");
+    printf("Create password. Password must be between 8 to 50 chaacters, and must contain at least \none"
+    " upper case character, one lower case character, one digit, and one special character.\n\n");
+    printf("Enter password: ");
 
     if (fgets(password, size, stdin) == NULL) {
         printf("Failed to read password");
+        exit(EXIT_FAILURE);
     }
+    password[size - 1] = 0;
     password[strcspn(password, "\n\r")] = 0;
 
     // Ensures password does not contain space
-    while (strcspn(password, " ") != strlen(password) || password[0] == '\0') {
-        printf("Invalid sizeof(password). Username must not contain spaces.\n");
-        printf("Enter your password: ");
+    while (strcspn(password, " ") != strlen(password) || password[0] == '\0' || strlen(password) < 8
+            || !strong_password(password)) {
+        if (strcspn(password, " ") != strlen(password)) 
+            printf("\n\nInvalid input. Password must not contain spaces.\n");
+        else if (password[0] == '\0') printf("\n\nInvalid input. Password can not be empty.\n");
+        else if (strlen(password) < 8 || strlen(password) > 50) 
+            printf("\n\nInvalid input. Password must be between 8 to 50 chaacters.\n");
+        else if (!strong_password(password))  
+            printf("\n\nInvalid input. Password must contain at least one upper case character,"
+            " one lower case character, one digit, and one special character.\n");
+
+        printf("Enter password: ");
 
         if (fgets(password, size, stdin) == NULL) {
             printf("Failed to read password");
         } 
+
+        password[size - 1] = 0;
         password[strcspn(password, "\n\r")] = 0;
     }
+    // Retrun terminal to old settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
+    printf("\n");
+}
+
+void get_password2(char *password, int size) 
+{
+    // Structs for terminal settings
+    static struct termios old_terminal_settings;
+    static struct termios new_terminal_settings;
+    // Retrieve old settings
+    tcgetattr(STDIN_FILENO, &old_terminal_settings);
+    new_terminal_settings = old_terminal_settings;
+    // turn off echo
+    new_terminal_settings.c_lflag &= ~(ICANON | ECHO);
+    new_terminal_settings.c_cc[VTIME] = 0;
+    new_terminal_settings.c_cc[VMIN] = 1;
+    // Set terminal option to no echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_terminal_settings);
+    // Get password from input
+    printf("Confirm password: ");
+
+    if (fgets(password, size, stdin) == NULL) {
+        printf("Failed to read password");
+        exit(EXIT_FAILURE);
+    }
+
+    password[size - 1] = 0;
+    password[strcspn(password, "\n\r")] = 0;
     // Retrun terminal to old settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal_settings);
     printf("\n");
@@ -243,18 +293,16 @@ void get_user_info(char *username, char *password, int size,  auth_token_t** aut
             if (strcmp(username, "q") == 0) continue;
             get_password(password, size);
             if (strcmp(password, "q") == 0) continue;
-            printf("Enter password again to confirm password.\n");
-            get_password(cp, size);
+            get_password2(cp, size);
             if (strcmp(cp, "q") == 0) continue;
             while (strcmp(password, cp) != 0){
-                printf("Passwords do not match.\n");
+                printf("Passwords do not match.\n\n");
                 get_password(password, size);
                 if (strcmp(password, "q") == 0) {
                     return_to_options =1;
                     break;
                 }
-                printf("Enter password again to confirm password.\n");
-                get_password(cp, size);
+                get_password2(cp, size);
                 if (strcmp(cp, "q") == 0) {
                     return_to_options =1;
                     break;
@@ -291,4 +339,21 @@ int get_choice()
 
     printf("\n");
     return opt;
+}
+
+int strong_password(char *password) {
+    char *p = password;
+    int upper, lower, digit, special;
+    upper = lower = digit = special = 0;
+    char c;
+
+    while (*p) {
+        c = *p++;
+        if (isupper(c)) upper++;
+        else if (islower(c)) lower++;
+        else if (isdigit(c)) digit++;
+        else if (ispunct(c)) special++;
+    }
+
+    return upper && lower && digit && special;
 }
