@@ -24,7 +24,7 @@
 #include "aes/aes.c" //Source: 
 
 void get_password (char *passsword, int size);
-void get_password2 (char *passsword, int size);
+void get_password2(char *password, int size, int opt);
 void get_username (char *username, int size);
 void get_user_info(char *password, char *username, int size, auth_token_t** auth);
 int get_choice();
@@ -103,6 +103,7 @@ int main(int argc, char const* argv[])
         }
     }
     
+    printf("\n\nLogin successful\n");
     printf("- You have %d unread message(s)\n", num_msg);
 
     char *rest; // input left in buffer after command string
@@ -187,7 +188,7 @@ void get_username(char *username, int size)
         username[size - 1] = 0;
         username[strcspn(username, "\n\r")] = 0;
     }
-    printf("\n");
+    //printf("\n");
 }
 
 void get_password(char *password, int size) 
@@ -242,7 +243,7 @@ void get_password(char *password, int size)
     printf("\n");
 }
 
-void get_password2(char *password, int size) 
+void get_password2(char *password, int size, int opt) 
 {
     // Structs for terminal settings
     static struct termios old_terminal_settings;
@@ -257,7 +258,8 @@ void get_password2(char *password, int size)
     // Set terminal option to no echo
     tcsetattr(STDIN_FILENO, TCSANOW, &new_terminal_settings);
     // Get password from input
-    printf("Confirm password: ");
+    if (opt == 1) printf("Confirm password: ");
+    else if (opt == 0) printf("Enter password: ");
 
     if (fgets(password, size, stdin) == NULL) {
         printf("Failed to read password");
@@ -281,7 +283,7 @@ void get_user_info(char *username, char *password, int size,  auth_token_t** aut
             printf("Enter q to return to options.\n");
             get_username(username, size);
             if (strcmp(username, "q") == 0) continue;
-            get_password(password, size);
+            get_password2(password, size, 0);
             if (strcmp(password, "q") == 0) continue;
             (*auth)->type = login;
         } 
@@ -293,7 +295,7 @@ void get_user_info(char *username, char *password, int size,  auth_token_t** aut
             if (strcmp(username, "q") == 0) continue;
             get_password(password, size);
             if (strcmp(password, "q") == 0) continue;
-            get_password2(cp, size);
+            get_password2(cp, size, 1);
             if (strcmp(cp, "q") == 0) continue;
             while (strcmp(password, cp) != 0){
                 printf("Passwords do not match.\n\n");
@@ -302,7 +304,7 @@ void get_user_info(char *username, char *password, int size,  auth_token_t** aut
                     return_to_options =1;
                     break;
                 }
-                get_password2(cp, size);
+                get_password2(cp, size, 1);
                 if (strcmp(cp, "q") == 0) {
                     return_to_options =1;
                     break;

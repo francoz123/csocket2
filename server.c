@@ -60,12 +60,16 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	} 
 	
+	
 	// Decrypt username and password
     AES_ECB_decrypt(&ctx, (uint8_t*)auth.username);
     AES_ECB_decrypt(&ctx, (uint8_t*)auth.password);
-	
 	strcpy(username, auth.username);
     strcpy(password, auth.password); 
+
+	if (auth.type == signup) {
+		add_user(auth.username, auth.password);
+	}
 	// Make sure user exists
 	while (!find_user(username, password)) {
 		if ((count = send(client_fd, &num_msg, sizeof(num_msg), 0)) == -1) {
@@ -126,6 +130,16 @@ int main(int argc, char* argv[])
 			if ((n = read_next_message(&head, &cursur, username, buffer)) == 1) {
 				send(client_fd, buffer, BUFFER_SIZE, 0);
 				remove_node(&head, &tail, &cursur);
+				char sender[256], msg[512];
+				sscanf(buffer, "%s: %n", sender, &n);
+				strcpy(msg,buffer + n);
+				strcpy(buffer, "[ ");
+				strcat(buffer, username);
+				strcat(buffer, " read your message: ");
+				strcat(buffer, msg);
+				strcat(buffer, " ]");
+				sender[strlen(sender)-1] = 0;
+				save_message("NOTIFICATION", sender, buffer, &head, &tail);
 			} else send(client_fd, "READ ERROR", sizeof("READ ERROR"), 0); // No message
 
 			compose_flag = 0; // Toggle compose flage off
