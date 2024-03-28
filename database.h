@@ -11,7 +11,10 @@
 #ifndef DATABASE
 #define DATABASE
 
+enum message_type {notification, messaage};
+
 typedef struct {
+    enum message_type type;
     char sender[256];
     char recipient[256];
     char message[1024];
@@ -49,7 +52,6 @@ int create_database(message_node_t **head, message_node_t **tail, char *username
     while ((read_value = fread(&message, sizeof(message_t), 1, fd)) != 0){
         if (read_value < 1) {
             printf("File Read error\n");
-            fprintf(stderr,"Read error from load\n");
         }
 
         if (!strcmp(message.recipient, username)) n++; // count users messages
@@ -104,7 +106,7 @@ int read_next_message(message_node_t **head, message_node_t **cursur, char *user
 }
 
 /**
- * Allocates memory and returns a message node
+ * Allocates memory and returns a message node pointer
 */
 message_node_t* create_node(){
     message_node_t *node = (message_node_t*)malloc(sizeof(message_node_t));
@@ -238,7 +240,14 @@ int save_message(char* sender, char* recipient, char buffer[], message_node_t** 
     return -1;
 }
 
-int find_user(char *username, char *password)
+/**
+ * Attempta to dfind a user from the database 
+ * @param username char* 
+ * @param password char* 
+ * @param opt int: 0 matches username only, 1 matches username and password
+ * @return int: 1 on success, 0 on failure
+ */
+int find_user(char *username, char *password, int opt)
 {
     FILE *fd;
     user_t user;
@@ -252,17 +261,22 @@ int find_user(char *username, char *password)
     while ((read_value = fread(&user, sizeof(user_t), 1, fd)) != 0){
         if (read_value < 1) {
             printf("File Read error\n");
-            fprintf(stderr,"Read error from load\n");
         }
 
-        if (!strcmp(user.username, username) && !strcmp(user.password, password)) return 1; 
-
+        if (opt && !strcmp(user.username, username) && !strcmp(user.password, password)) return 1; 
+        else if (!strcmp(user.username, username)) return 1; 
     }
 
     fclose(fd);
     return 0;
 }
 
+/**
+ * Attempta to dfind a user from the database 
+ * @param username char* 
+ * @param password char* 
+ * @return void
+ */
 void add_user(char *username, char *password)
 {
     FILE *fd;

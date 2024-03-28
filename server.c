@@ -68,10 +68,29 @@ int main(int argc, char* argv[])
     strcpy(password, auth.password); 
 
 	if (auth.type == signup) {
-		add_user(auth.username, auth.password);
+		if (find_user(username, password, 0)) add_user(auth.username, auth.password);
+			num_msg = -2;
+
+		while (num_msg == -2 && find_user(username, password, 0)) {
+			if ((count = send(client_fd, &num_msg, sizeof(num_msg), 0)) == -1) {
+				perror("Send error\n");
+				exit(EXIT_FAILURE);
+			}
+
+			if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
+				perror("Read error");
+				exit(EXIT_FAILURE);
+			} 
+			// Decrypt username and password
+			AES_ECB_decrypt(&ctx, (uint8_t*)auth.username);
+			AES_ECB_decrypt(&ctx, (uint8_t*)auth.password);
+			
+			strcpy(username, auth.username);
+			strcpy(password, auth.password);  
+		}
 	}
 	// Make sure user exists
-	while (!find_user(username, password)) {
+	while (!find_user(username, password, 1)) {
 		if ((count = send(client_fd, &num_msg, sizeof(num_msg), 0)) == -1) {
 			perror("Send error\n");
 			exit(EXIT_FAILURE);
@@ -131,7 +150,8 @@ int main(int argc, char* argv[])
 				strcat(buffer, msg);
 				strcat(buffer, " ]");
 				sender[strlen(sender)-1] = 0;
-				save_message("NOTIFICATION", sender, buffer, &head, &tail);
+				if (cursur->message->type != notification && strcmp(cursur->message->recipient, username)) 
+					save_message("NOTIFICATION", sender, buffer, &head, &tail);
 			} else {
 				strcpy(buffer, "READ ERROR");
 				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);

@@ -84,6 +84,25 @@ int main(int argc, char const* argv[])
         exit(EXIT_FAILURE);
     }
 
+    while (num_msg == -2) {
+        printf("Username already exists.\n");
+        /* get_username(auth.username, sizeof(auth.username));
+        get_password(auth.password, sizeof(auth.password));  */    
+        get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
+        // Encrypt username and password
+        AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
+        AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
+
+        if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+            perror("Send error\n");
+            exit(EXIT_FAILURE);
+        }
+        if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+            perror("Read error\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     while (num_msg == -1) {
         printf("Login failed\n");
         /* get_username(auth.username, sizeof(auth.username));
