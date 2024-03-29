@@ -102,7 +102,8 @@ int read_next_message(message_node_t **head, message_node_t **cursur, char *user
         strcat(buffer, ": ");
         strcat(buffer, (*cursur)->message->message);
         return 1;
-    }else return -1;
+    }
+    return -1;
 }
 
 /**

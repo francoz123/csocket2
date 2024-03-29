@@ -131,7 +131,7 @@ int main(int argc, char const* argv[])
         sscanf(buffer, "%s %n", command, &n); // 
         rest = buffer + n;
 
-        if (strncmp(buffer, "EXIT", 4) == 0) {// Exit on EXIT command
+        if (strcmp(buffer, "EXIT") == 0) {// Exit on EXIT command
             AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
             send(client_fd, "EXIT", sizeof("EXIT"), 0);
             break;

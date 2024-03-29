@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 					save_database(&head); // Save messages
 					exit(EXIT_FAILURE);
 				}
-				remove_node(&head, &tail, &cursur);
+				//remove_node(&head, &tail, &cursur);
 				AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 				char sender[256], msg[512];
 				sscanf(buffer, "%s %n", sender, &n);
@@ -154,9 +154,10 @@ int main(int argc, char* argv[])
 				strcat(buffer, " read your message: ");
 				strcat(buffer, msg);
 				strcat(buffer, " ]");
-				sender[strlen(sender)-1] = 0;
-				if (cursur && cursur->message->type && cursur->message->type != notification && strcmp(cursur->message->recipient, username)) 
+				sender[strlen(sender)-1] = 0; 
+				if (cursur->message->type != notification && strcmp(cursur->message->recipient, username) != 0)
 					save_message("NOTIFICATION", sender, buffer, &head, &tail);
+				remove_node(&head, &tail, &cursur);
 			} else {
 				strcpy(buffer, "READ ERROR");
 				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
@@ -188,11 +189,18 @@ int main(int argc, char* argv[])
 					save_database(&head); // Save messages
 					exit(EXIT_FAILURE);
 				}
-			}else send(client_fd, "MESSAGE FAILED", sizeof("MESSAGE FAILED"), 0);
+			}else {
+				count = send(client_fd, "MESSAGE FAILED", sizeof("MESSAGE FAILED"), 0);
+				if (count < 0) {
+					perror("Send error.");
+					save_database(&head); // Save messages
+					exit(EXIT_FAILURE);
+				}
+			}
 		} else { // Bad command received
 			strcpy(buffer, "ERROR");
 			AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
-			count = send(client_fd, "ERROR",BUFFER_SIZE, 0);
+			count = send(client_fd, buffer, BUFFER_SIZE, 0);
 			if (count < 0) {
 				perror("Send error.");
 				save_database(&head); // Save messages
