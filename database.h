@@ -217,7 +217,7 @@ void remove_node(message_node_t **head, message_node_t** tail, message_node_t **
  * @return void
  */
 int save_message(char* sender, char* recipient, char buffer[], message_node_t** head, message_node_t **tail){
-    enum message_type mt = !strcmp(sender, "NOTIFICATION") ? notification : messaage;
+    enum message_type mt = strcmp(sender, "NOTIFICATION") == 0 ? notification : messaage;
     if (!(*head)) {
         *head = *tail = create_node();
         (*head)->message = (message_t*)malloc(sizeof(message_t));
