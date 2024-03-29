@@ -217,7 +217,7 @@ void remove_node(message_node_t **head, message_node_t** tail, message_node_t **
  * @return void
  */
 int save_message(char* sender, char* recipient, char buffer[], message_node_t** head, message_node_t **tail){
-    
+    enum message_type mt = !strcmp(sender, "NOTIFICATION") ? notification : messaage;
     if (!(*head)) {
         *head = *tail = create_node();
         (*head)->message = (message_t*)malloc(sizeof(message_t));
@@ -225,6 +225,7 @@ int save_message(char* sender, char* recipient, char buffer[], message_node_t** 
         strcpy((*head)->message->sender, sender);
         strcpy((*head)->message->recipient, recipient);
         strcpy((*head)->message->message, buffer);
+        (*head)->message->type = mt;
         return 1;
     }else {
         message_node_t *temp = create_node();
@@ -232,6 +233,7 @@ int save_message(char* sender, char* recipient, char buffer[], message_node_t** 
         strcpy(temp->message->sender, sender);
         strcpy(temp->message->recipient, recipient);
         strcpy(temp->message->message, buffer);
+        temp->message->type = mt;
         temp->next = 0;
         (*tail)->next = temp;
         (*tail) = temp;
@@ -272,7 +274,7 @@ int find_user(char *username, char *password, int opt)
 }
 
 /**
- * Attempta to dfind a user from the database 
+ * Adds a new user to the database
  * @param username char* 
  * @param password char* 
  * @return void

@@ -6,7 +6,7 @@
  *	Compile: make
  * 	Run: ./client <host name> <port>
  * 
- * @author: Francis Ozoka - 220228986 
+ * @author: Francis Ozoka - 220228986
 */
 #include <stdio.h>
 #include <string.h>
@@ -53,10 +53,8 @@ int main(int argc, char const* argv[])
 
     // Initialize ctx
     AES_init_ctx(&ctx, (uint8_t*) key);
-    auth_token_t *auth_ptr = &auth;
-    printf("Welcome! Please login to interract with the server\n");
-    /* get_username(auth.username, sizeof(auth.username));
-    get_password(auth.password, sizeof(auth.password)); */
+    auth_token_t *auth_ptr = &auth; // Holds username and password
+    printf("Welcome! Please login or register to interract with the server\n");
     get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
     // Encrypt username and password
     AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
@@ -84,10 +82,8 @@ int main(int argc, char const* argv[])
         exit(EXIT_FAILURE);
     }
 
-    while (num_msg == -2) {
+    while (num_msg == -2) { // While username exits 
         printf("Username already exists.\n");
-        /* get_username(auth.username, sizeof(auth.username));
-        get_password(auth.password, sizeof(auth.password));  */    
         get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
         // Encrypt username and password
         AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
@@ -130,13 +126,13 @@ int main(int argc, char const* argv[])
     while (1) {
         memset(buffer, 0, sizeof(buffer)); //Reset buffer
         printf(">>> ");
-        fgets(buffer, sizeof(buffer), stdin);
+        fgets(buffer, sizeof(buffer), stdin); // Get input from stdin
         buffer[strcspn(buffer, "\n\r")] = 0;
-        sscanf(buffer, "%s %n", command, &n);
+        sscanf(buffer, "%s %n", command, &n); // 
         rest = buffer + n;
 
         if (strncmp(buffer, "EXIT", 4) == 0) {// Exit on EXIT command
-            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
+            AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
             send(client_fd, "EXIT", sizeof("EXIT"), 0);
             break;
         }
@@ -150,10 +146,15 @@ int main(int argc, char const* argv[])
             }
 
             if (strcmp(command, read_cmd) == 0) {
-                AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
-                send(client_fd, buffer, strlen(buffer), 0);
+                AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
+
+                if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
+                    perror("Send error\n");
+				    exit(EXIT_FAILURE);
+                }
                 count = read(client_fd, buffer, BUFFER_SIZE); 
                 AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
+
                 if (count < 0) {
                     printf("Read error\n");
                     exit(EXIT_FAILURE);
@@ -163,6 +164,7 @@ int main(int argc, char const* argv[])
             }
         }
         if ((strncmp(command, compose_cmd, strlen(compose_cmd)) == 0)) {
+
             while (strcmp(compose_cmd, command) == 0  && (strcspn(rest, " ") != strlen(rest) || rest[0] == '\0')) {
                 printf("Invalid command or username contain space(s). Usage: COMPOSE <username>\n");
                 printf(">>> ");
@@ -172,12 +174,21 @@ int main(int argc, char const* argv[])
                 rest = buffer + n;
             }
             AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
-            send(client_fd, buffer, BUFFER_SIZE, 0);
+
+            if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
+                perror("Send error\n");
+                exit(EXIT_FAILURE);
+            }
         } else {// Probable message
             AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
-            send(client_fd, buffer, BUFFER_SIZE, 0);
+
+            if (send(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
+                perror("Send error\n");
+                exit(EXIT_FAILURE);
+            }
             count = read(client_fd, buffer, BUFFER_SIZE);
             AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
+
             if (count < 0) {
                 printf("Read error\n");
                 exit(EXIT_FAILURE);
@@ -194,9 +205,15 @@ int main(int argc, char const* argv[])
 	return 0;
 }
 
+/**
+ * Gets username from input
+ * @param username
+ * @param size int: length of username buffer
+*/
 void get_username(char *username, int size)
 {
     printf("Enter your username: ");
+
     if (fgets(username, size, stdin) == NULL) {
         printf("Failed to read usename");
     }
@@ -216,6 +233,11 @@ void get_username(char *username, int size)
     //printf("\n");
 }
 
+/**
+ * Gets password from input
+ * @param password
+ * @param size int: length of username buffer
+*/
 void get_password(char *password, int size) 
 {
     // Structs for terminal settings
@@ -268,6 +290,12 @@ void get_password(char *password, int size)
     printf("\n");
 }
 
+/**
+ * Gets password from input
+ * @param password
+ * @param size int: length of username buffer
+ * @param opt int: 0 for password entry, 1 to confirm password
+*/
 void get_password2(char *password, int size, int opt) 
 {
     // Structs for terminal settings
@@ -298,6 +326,13 @@ void get_password2(char *password, int size, int opt)
     printf("\n");
 }
 
+/**
+ * Gets user info from input for authentication
+ * @param password
+ * @param username
+ * @param size int: length of username and password buffers
+ * @param auth authentication_token tobe set
+*/
 void get_user_info(char *username, char *password, int size,  auth_token_t** auth)
 {
     int opt;
@@ -344,6 +379,9 @@ void get_user_info(char *username, char *password, int size,  auth_token_t** aut
     
 }
 
+/**
+ * Gets user choice to either login or register
+*/
 int get_choice()
 {
     int opt = 0;
@@ -368,6 +406,11 @@ int get_choice()
     return opt;
 }
 
+/**
+ * Checkes passord strength
+ * @param password
+ * @return int: 1 if password meets requirements, 0 if not.
+*/
 int strong_password(char *password) {
     char *p = password;
     int upper, lower, digit, special;

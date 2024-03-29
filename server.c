@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
 				strcat(buffer, msg);
 				strcat(buffer, " ]");
 				sender[strlen(sender)-1] = 0;
-				if (cursur->message->type != notification && strcmp(cursur->message->recipient, username)) 
+				if (cursur && cursur->message->type != notification && strcmp(cursur->message->recipient, username)) 
 					save_message("NOTIFICATION", sender, buffer, &head, &tail);
 			} else {
 				strcpy(buffer, "READ ERROR");
