@@ -144,7 +144,11 @@ int main(int argc, char* argv[])
 					save_database(&head); // Save messages
 					exit(EXIT_FAILURE);
 				}
-				//remove_node(&head, &tail, &cursur);
+				/* enum message_type mt = cursur->message->type;
+				char rcp[256];
+				strcpy(rcp, cursur->message->recipient); */
+
+				remove_node(&head, &tail, &cursur);
 				AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 				char sender[256], msg[512];
 				sscanf(buffer, "%s %n", sender, &n);
@@ -155,9 +159,10 @@ int main(int argc, char* argv[])
 				strcat(buffer, msg);
 				strcat(buffer, " ]");
 				sender[strlen(sender)-1] = 0; 
-				if (cursur->message->type != notification && strcmp(cursur->message->recipient, username) != 0)
-					save_message("NOTIFICATION", sender, buffer, &head, &tail);
-				remove_node(&head, &tail, &cursur);
+
+				//if (mt != notification) 
+				save_message("NOTIFICATION", sender, buffer, &head, &tail);
+				//remove_node(&head, &tail, &cursur);
 			} else {
 				strcpy(buffer, "READ ERROR");
 				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
