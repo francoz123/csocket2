@@ -12,6 +12,7 @@
 #include "protocol.h"
 #include "database.h"
 #include "aes/aes.c"
+#include "sha256.c"
 
 int main(int argc, char* argv[])
 {
@@ -68,7 +69,7 @@ int main(int argc, char* argv[])
     strcpy(password, auth.password); 
 
 	if (auth.type == signup) {
-		if (find_user(username, password, 0)) add_user(auth.username, auth.password);
+		if (!find_user(username, password, 0)) add_user(auth.username, auth.password);
 			num_msg = -2;
 
 		while (num_msg == -2 && find_user(username, password, 0)) {
@@ -144,9 +145,6 @@ int main(int argc, char* argv[])
 					save_database(&head); // Save messages
 					exit(EXIT_FAILURE);
 				}
-				/* enum message_type mt = cursur->message->type;
-				char rcp[256];
-				strcpy(rcp, cursur->message->recipient); */
 
 				remove_node(&head, &tail, &cursur);
 				AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
@@ -160,9 +158,7 @@ int main(int argc, char* argv[])
 				strcat(buffer, " ]");
 				sender[strlen(sender)-1] = 0; 
 
-				//if (mt != notification) 
 				save_message("NOTIFICATION", sender, buffer, &head, &tail);
-				//remove_node(&head, &tail, &cursur);
 			} else {
 				strcpy(buffer, "READ ERROR");
 				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
