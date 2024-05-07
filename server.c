@@ -9,8 +9,7 @@
  * @author: Francis Ozoka - 220228986 
 */
 
-#include <openssl/err.h>
-#include <openssl/ssl.h>
+#include "tls.h"
 #include "protocol.h"
 #include "database.h"
 
@@ -39,13 +38,13 @@ int main(int argc, char* argv[])
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
 	
- server_fd = create_socket();
- bind_socket(server_fd, &server_address, PORT); // Bind port
+ server_fd = create_socket(PORT);
+ /*bind_socket(server_fd, &server_address, PORT); // Bind port
 
 	if (listen(server_fd, 3) < 0) {// Listen for connections 
 		perror("listen error");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 
 	printf("Waiting connection...\n");
 	// Accept connections with client_fd
@@ -54,6 +53,16 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 	printf("Connection established.\n");
+
+ SSL_CTX *ctx = create_context();
+ configure_context(ctx);
+
+ SSL *ssl = ssl = SSL_new(ctx);
+ SSL_set_fd(ssl, client);
+
+ if (SSL_accept(ssl) <= 0) {
+     ERR_print_errors_fp(stderr);
+ }
 	ssize_t count;
 	auth_token_t auth;
 	if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
@@ -198,8 +207,12 @@ int main(int argc, char* argv[])
     
 	save_database(&head);
 	// closing the sockets
+ SSL_shutdown(ssl);
+ SSL_free(ssl);
+ close(client);
 	close(client_fd);
 	close(server_fd);
+ SSL_CTX_free(ctx);
 
 	return 0;
 }
