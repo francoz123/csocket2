@@ -213,6 +213,7 @@ int main(int argc, char* argv[])
 	close(client_fd);
 	close(server_fd);
  SSL_CTX_free(ctx);
+ EVP_cleanup();
 
 	return 0;
 }
