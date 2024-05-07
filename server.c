@@ -8,8 +8,8 @@
  * 
  * @author: Francis Ozoka - 220228986 
 */
-//#include <openssl/bio.h> 
-//#include <openssl/err.h>
+
+#include <openssl/err.h>
 #include <openssl/ssl.h>
 #include "protocol.h"
 #include "database.h"
@@ -39,8 +39,8 @@ int main(int argc, char* argv[])
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
 	
-    server_fd = create_socket();
-    bind_socket(server_fd, &server_address, PORT); // Bind port
+ server_fd = create_socket();
+ bind_socket(server_fd, &server_address, PORT); // Bind port
 
 	if (listen(server_fd, 3) < 0) {// Listen for connections 
 		perror("listen error");
