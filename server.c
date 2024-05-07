@@ -8,11 +8,12 @@
  * 
  * @author: Francis Ozoka - 220228986 
 */
-
+//#include <openssl/bio.h> 
+//#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include "protocol.h"
 #include "database.h"
-#include "aes/aes.c"
-#include "sha256.c"
+
 
 int main(int argc, char* argv[])
 {
@@ -29,16 +30,15 @@ int main(int argc, char* argv[])
 
 	int n, compose_flag = 0, num_msg = -1;
 	char buffer[BUFFER_SIZE] = { 0 };
-	struct AES_ctx ctx;
-	char key[] = "7R5dPbNj!#h@a2Fk";
-	// Initialize ctx
-    AES_init_ctx(&ctx, (uint8_t*) key);
-	// Buffers
 	char username[256], password[256], command[26], read_cmd[4] = "READ", compose_cmd[] = "COMPOSE";
 
 	message_node_t *head, *tail, *cursur;
 	head = tail = cursur = 0;
 
+	/* Initializing OpenSSL */
+	SSL_load_error_strings();
+	OpenSSL_add_all_algorithms();
+	
     server_fd = create_socket();
     bind_socket(server_fd, &server_address, PORT); // Bind port
 
@@ -60,11 +60,7 @@ int main(int argc, char* argv[])
 		perror("Read error");
 		exit(EXIT_FAILURE);
 	} 
-	
-	
-	// Decrypt username and password
-    AES_ECB_decrypt(&ctx, (uint8_t*)auth.username);
-    AES_ECB_decrypt(&ctx, (uint8_t*)auth.password);
+	    
 	strcpy(username, auth.username);
     strcpy(password, auth.password); 
 
@@ -82,10 +78,7 @@ int main(int argc, char* argv[])
 				perror("Read error");
 				exit(EXIT_FAILURE);
 			} 
-			// Decrypt username and password
-			AES_ECB_decrypt(&ctx, (uint8_t*)auth.username);
-			AES_ECB_decrypt(&ctx, (uint8_t*)auth.password);
-			
+
 			strcpy(username, auth.username);
 			strcpy(password, auth.password);  
 		}
@@ -101,10 +94,7 @@ int main(int argc, char* argv[])
 			perror("Read error");
 			exit(EXIT_FAILURE);
 		} 
-		// Decrypt username and password
-		AES_ECB_decrypt(&ctx, (uint8_t*)auth.username);
-		AES_ECB_decrypt(&ctx, (uint8_t*)auth.password);
-		
+
 		strcpy(username, auth.username);
 		strcpy(password, auth.password);  
 	}
@@ -129,7 +119,7 @@ int main(int argc, char* argv[])
 			save_database(&head); // Save messages
             break;
         } 
-		AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
+
 		buffer[strcspn(buffer, "\n\r")] = 0;
 		sscanf(buffer, "%s %n", command, &n);
 		rest  = buffer + n;
@@ -137,7 +127,6 @@ int main(int argc, char* argv[])
 		// READ command action - retrieve next message for user if available
 		if (strncmp(command, read_cmd, sizeof(read_cmd)) == 0 && strlen(rest) == 0) {
 			if ((n = read_next_message(&head, &cursur, username, buffer)) == 1) {
-				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 				count = send(client_fd, buffer, BUFFER_SIZE, 0);
 
 				if (count < 0) {
@@ -147,7 +136,6 @@ int main(int argc, char* argv[])
 				}
 
 				remove_node(&head, &tail, &cursur);
-				AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 				char sender[256], msg[512];
 				sscanf(buffer, "%s %n", sender, &n);
 				strcpy(msg, (buffer + n));
@@ -161,7 +149,6 @@ int main(int argc, char* argv[])
 				save_message("NOTIFICATION", sender, buffer, &head, &tail);
 			} else {
 				strcpy(buffer, "READ ERROR");
-				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 				count = send(client_fd, buffer, BUFFER_SIZE, 0);
 
 				if (count < 0) {
@@ -182,7 +169,6 @@ int main(int argc, char* argv[])
 		if (compose_flag == 1) {// Expecting message for the recipient
 			if (save_message(username, recipient, buffer, &head, &tail)) { // Ensure meaage was sent
 				strcpy(buffer, "MESSAGE SENT");
-				AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 				count = send(client_fd, buffer, BUFFER_SIZE, 0);
 
 				if (count < 0) {
@@ -200,7 +186,6 @@ int main(int argc, char* argv[])
 			}
 		} else { // Bad command received
 			strcpy(buffer, "ERROR");
-			AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 			count = send(client_fd, buffer, BUFFER_SIZE, 0);
 			if (count < 0) {
 				perror("Send error.");

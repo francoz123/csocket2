@@ -18,10 +18,14 @@
 #include <netinet/in.h> 
 #include <netdb.h>
 #include <ctype.h>
+
+#include <openssl/err.h> 
+#include <openssl/ssl.h>
+#include <openssl/bio.h> 
+
 #include "protocol.h"
 #include <termios.h> // For terminal settings
 #include "protocol.h"
-#include "aes/aes.c" //Source: 
 
 void get_password (char *passsword, int size);
 void get_password2(char *password, int size, int opt);
@@ -39,10 +43,9 @@ int main(int argc, char const* argv[])
 
 	int n, num_msg, client_fd, PORT = atoi(argv[2]); 
     ssize_t count;
-	char buffer[1024] = { 0 }, key[] = "7R5dPbNj!#h@a2Fk"; // Encryption key
+	char buffer[1024] = { 0 }; // Encryption key
     const char *host = argv[1]; // Set host name from args
     char *host_IP;
-    struct AES_ctx ctx; // Used for aes encryption
     auth_token_t auth; 
     // Program buffers
     char command[256], read_cmd[4] = "READ", compose_cmd[] = "COMPOSE";
@@ -51,14 +54,14 @@ int main(int argc, char const* argv[])
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(PORT);
 
-    // Initialize ctx
-    AES_init_ctx(&ctx, (uint8_t*) key);
+    /* Initializing OpenSSL */
+	SSL_load_error_strings();
+	OpenSSL_add_all_algorithms();
+    SSL_library_init();
+
     auth_token_t *auth_ptr = &auth; // Holds username and password
     printf("Welcome! Please login or register to interract with the server\n");
     get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
-    // Encrypt username and password
-    AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
-    AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
     // Get host IP
     struct hostent *host_info = gethostbyname(host);
     host_IP = inet_ntoa(*((struct in_addr*) host_info->h_addr_list[0]));
@@ -70,7 +73,26 @@ int main(int argc, char const* argv[])
 		printf("Invalid address/ Address not supported \n");
 		return -1;
 	}
+    
     connect_to_server(client_fd, &server_address, PORT);
+    /*
+    * Create an SSL_CTX which we can use to create SSL objects from. We
+    * want an SSL_CTX for creating clients so we use TLS_client_method()
+    * here.
+    */
+    SSL_CTX  *ctx = SSL_CTX_new(TLS_client_method());
+    if (ctx == NULL) {
+        printf("Failed to create the SSL_CTX\n");
+        //goto end;
+    }
+    SSL *ssl = SSL_new(ctx);
+    if (ssl == NULL) {
+        printf("Failed to create the SSL object\n");
+        //goto end;
+    }    
+
+    SSL_set_fd (ssl, client_fd);
+    SSL_connect (ssl);
 	
     if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
         perror("Send error\n");
@@ -85,10 +107,7 @@ int main(int argc, char const* argv[])
     while (num_msg == -2) { // While username exits 
         printf("Username already exists.\n");
         get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
-        // Encrypt username and password
-        AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
-        AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
-
+        
         if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
             perror("Send error\n");
             exit(EXIT_FAILURE);
@@ -100,13 +119,9 @@ int main(int argc, char const* argv[])
     }
 
     while (num_msg == -1) {
-        printf("Login failed\n");
-        /* get_username(auth.username, sizeof(auth.username));
-        get_password(auth.password, sizeof(auth.password));  */    
+        printf("Login failed\n");   
         get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
-        // Encrypt username and password
-        AES_ECB_encrypt(&ctx, (uint8_t*)auth.username);
-        AES_ECB_encrypt(&ctx, (uint8_t*)auth.password);
+        
 
         if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
             perror("Send error\n");
@@ -132,7 +147,6 @@ int main(int argc, char const* argv[])
         rest = buffer + n;
 
         if (strcmp(buffer, "EXIT") == 0) {// Exit on EXIT command
-            AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
             send(client_fd, "EXIT", sizeof("EXIT"), 0);
             sleep(1);
             break;
@@ -147,14 +161,12 @@ int main(int argc, char const* argv[])
             }
 
             if (strcmp(command, read_cmd) == 0) {
-                AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
 
                 if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
                     perror("Send error\n");
 				    exit(EXIT_FAILURE);
                 }
                 count = read(client_fd, buffer, BUFFER_SIZE); 
-                AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 
                 if (count < 0) {
                     printf("Read error\n");
@@ -174,21 +186,18 @@ int main(int argc, char const* argv[])
                 buffer[strcspn(buffer, "\n\r")] = 0;
                 rest = buffer + n;
             }
-            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 
             if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
         } else {// Probable message
-            AES_ECB_encrypt(&ctx, (uint8_t*)buffer);
 
             if (send(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
             count = read(client_fd, buffer, BUFFER_SIZE);
-            AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 
             if (count < 0) {
                 printf("Read error\n");
