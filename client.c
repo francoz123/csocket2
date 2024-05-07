@@ -134,6 +134,7 @@ int main(int argc, char const* argv[])
         if (strcmp(buffer, "EXIT") == 0) {// Exit on EXIT command
             AES_ECB_encrypt(&ctx, (uint8_t*)buffer); // Encrypte buffer
             send(client_fd, "EXIT", sizeof("EXIT"), 0);
+            sleep(1);
             break;
         }
         // READ command

@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
         if ((count = read(client_fd, buffer, BUFFER_SIZE)) < 0) {
             perror("Read error from server");
 			save_database(&head); // Save messages
-            exit(EXIT_FAILURE);
+            break;
         } 
 		AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 		buffer[strcspn(buffer, "\n\r")] = 0;
