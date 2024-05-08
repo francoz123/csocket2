@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
  }
 	ssize_t count;
 	auth_token_t auth;
-	if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
+	if ((count= SSL_read(ssl, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
 		perror("Read error");
 		exit(EXIT_FAILURE);
 	} 
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
+			if ((count= SSL_read(ssl, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
 				perror("Read error");
 				exit(EXIT_FAILURE);
 			} 
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		if ((count= read(client_fd, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
+		if ((count= SSL_read(ssl, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
 			perror("Read error");
 			exit(EXIT_FAILURE);
 		} 
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 		memset(buffer, '\0', sizeof(buffer));
 		memset(command, 0, sizeof(command));
 
-        if ((count = read(client_fd, buffer, BUFFER_SIZE)) < 0) {
+        if ((count = SSL_read(ssl, buffer, BUFFER_SIZE)) < 0) {
             perror("Read error from server");
 			save_database(&head); // Save messages
             break;
