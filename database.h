@@ -1,4 +1,4 @@
-/**
+9/**
  * ****************** database.h **********************
  * Abstracts types fro creating and storing messages
  * @author Francis Ozoka - 220228986
@@ -241,6 +241,29 @@ int save_message(char* sender, char* recipient, char buffer[], message_node_t** 
         return 1;
     }
     return -1;
+}
+
+/**
+ * Saves message to the database (Linked list)
+ * @param sender char* sender
+ * @param recipient char* recipient of the message
+ * @param buffer message to be stored
+ * @param head pointer to the head pointer
+ * @param tail pointer to the tail pointer
+ * @return void
+ */
+void save_message2(message_t** message, message_node_t** head, message_node_t **tail){
+    if (!(*head)) {
+        *head = *tail = create_node();
+        (*head)->message = *message;
+    }else {
+        message_node_t *temp = create_node();
+        temp->message = *message;
+        temp->next = 0;
+        (*tail)->next = temp;
+        (*tail) = temp;
+        temp = 0;
+    }
 }
 
 /**
