@@ -94,12 +94,12 @@ int main(int argc, char const* argv[])
     SSL_set_fd (ssl, client_fd);
     SSL_connect (ssl);
 	
-    if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+    if((count = SSL_write(ssl, &auth, sizeof(auth_token_t), 0)) == -1) {
         perror("Send error\n");
         exit(EXIT_FAILURE);
     }
 
-    if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+    if ((count = SSL_read(ssl, &num_msg, sizeof(num_msg))) == -1) {
         perror("Read error\n");
         exit(EXIT_FAILURE);
     }
@@ -108,11 +108,11 @@ int main(int argc, char const* argv[])
         printf("Username already exists.\n");
         get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
         
-        if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+        if((count = SSL_write(ssl, &auth, sizeof(auth_token_t), 0)) == -1) {
             perror("Send error\n");
             exit(EXIT_FAILURE);
         }
-        if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+        if ((count = SSL_read(ssl, &num_msg, sizeof(num_msg))) == -1) {
             perror("Read error\n");
             exit(EXIT_FAILURE);
         }
@@ -123,11 +123,11 @@ int main(int argc, char const* argv[])
         get_user_info(auth.username, auth.password, sizeof(auth.username), &auth_ptr);
         
 
-        if((count = send(client_fd, &auth, sizeof(auth_token_t), 0)) == -1) {
+        if((count = SSL_write(ssl, &auth, sizeof(auth_token_t), 0)) == -1) {
             perror("Send error\n");
             exit(EXIT_FAILURE);
         }
-        if ((count = read(client_fd, &num_msg, sizeof(num_msg))) == -1) {
+        if ((count = SSL_read(ssl, &num_msg, sizeof(num_msg))) == -1) {
             perror("Read error\n");
             exit(EXIT_FAILURE);
         }
@@ -162,11 +162,11 @@ int main(int argc, char const* argv[])
 
             if (strcmp(command, read_cmd) == 0) {
 
-                if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
+                if (SSL_write(ssl, buffer, strlen(buffer), 0) < 0) {
                     perror("Send error\n");
 				    exit(EXIT_FAILURE);
                 }
-                count = read(client_fd, buffer, BUFFER_SIZE); 
+                count = SSL_read(ssl, buffer, BUFFER_SIZE); 
 
                 if (count < 0) {
                     printf("Read error\n");
@@ -187,17 +187,17 @@ int main(int argc, char const* argv[])
                 rest = buffer + n;
             }
 
-            if (send(client_fd, buffer, strlen(buffer), 0) < 0) {
+            if (SSL_write(ssl, buffer, strlen(buffer), 0) < 0) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
         } else {// Probable message
 
-            if (send(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
+            if (SSL_write(ssl, buffer, BUFFER_SIZE, 0) < 0) {
                 perror("Send error\n");
                 exit(EXIT_FAILURE);
             }
-            count = read(client_fd, buffer, BUFFER_SIZE);
+            count = SSL_read(ssl, buffer, BUFFER_SIZE);
 
             if (count < 0) {
                 printf("Read error\n");
