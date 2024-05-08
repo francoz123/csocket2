@@ -1,7 +1,10 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <arpa/inet.h>
+#include <netinet/in.h> 
 
-int create_socket(int port)
+
+int create_socket2(int port)
 {
     int s;
     struct sockaddr_in addr;
@@ -60,10 +63,10 @@ void configure_context(SSL_CTX *ctx)
     }
 }
 
-void configure_context(SSL_CTX *ctx, char* cert, char* key)
+void configure_context2(SSL_CTX *ctx, char* cert, char* key)
 {
     /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(ctx, cert, SSL_FILETYPE_PEM) <= 0) {
+   /*  if (SSL_CTX_use_certificate_file(ctx, cert, SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -71,8 +74,40 @@ void configure_context(SSL_CTX *ctx, char* cert, char* key)
     if (SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM) <= 0 ) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
-    }
+    } */
+
+    // Set verify_callback function
+    //SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
 }
 
 
- 
+ // Callback function for certificate verification
+/*int verify_callback(int preverify_ok, X509_STORE_CTX *ctx) {
+     // If preverify_ok is already false, the certificate verification failed
+    if (!preverify_ok) {
+        return 0;
+    }
+
+    // Get the certificate being verified
+    X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
+
+    // Get the issuer and subject names from the certificate
+    char issuer[256];
+    char subject[256];
+    X509_NAME_oneline(X509_get_issuer_name(cert), issuer, sizeof(issuer));
+    X509_NAME_oneline(X509_get_subject_name(cert), subject, sizeof(subject));
+
+    // Compare issuer and subject for self-signed certificates
+    if (strcmp(issuer, subject) == 0) {
+        printf("Self-signed certificate verified successfully.\n");
+        return 1; // Return 1 to indicate successful verification
+    } else {
+        printf("Certificate verification failed: Certificate is not self-signed.\n");
+        return 0; // Return 0 to indicate verification failure
+    } 
+
+    return 1;
+}*/
+int verify_callback(int preverify_ok, X509_STORE_CTX *ctx) {
+    return 1;
+}

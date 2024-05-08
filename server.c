@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
 	
- server_fd = create_socket(PORT);
+ server_fd = create_socket2(PORT);
  /*bind_socket(server_fd, &server_address, PORT); // Bind port
 
 	if (listen(server_fd, 3) < 0) {// Listen for connections 
@@ -54,15 +54,16 @@ int main(int argc, char* argv[])
 	}
 	printf("Connection established.\n");
 
- SSL_CTX *ctx = create_context();
- configure_context(ctx);
+	SSL_CTX *ctx = create_context();
+	configure_context(ctx);
 
- SSL *ssl = ssl = SSL_new(ctx);
- SSL_set_fd(ssl, client);
+	SSL *ssl = ssl = SSL_new(ctx);
+	SSL_set_fd(ssl, client_fd);
 
- if (SSL_accept(ssl) <= 0) {
-     ERR_print_errors_fp(stderr);
- }
+	if (SSL_accept(ssl) <= 0) {
+		ERR_print_errors_fp(stderr);
+	}
+
 	ssize_t count;
 	auth_token_t auth;
 	if ((count= SSL_read(ssl, &auth, sizeof(auth_token_t))) < 0) { // Read slient data
@@ -74,11 +75,11 @@ int main(int argc, char* argv[])
     strcpy(password, auth.password); 
 
 	if (auth.type == signup) {
-		if (!find_user(username, password, 0)) add_user(auth.username, auth.password);
+		if (find_user(username, password, 0)) add_user(auth.username, auth.password);
 			num_msg = -2;
 
 		while (num_msg == -2 && find_user(username, password, 0)) {
-			if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg), 0)) == -1) {
+			if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg))) == -1) {
 				perror("Send error\n");
 				exit(EXIT_FAILURE);
 			}
@@ -94,7 +95,7 @@ int main(int argc, char* argv[])
 	}
 	// Make sure user exists
 	while (!find_user(username, password, 1)) {
-		if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg), 0)) == -1) {
+		if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg))) == -1) {
 			perror("Send error\n");
 			exit(EXIT_FAILURE);
 		}
@@ -110,7 +111,7 @@ int main(int argc, char* argv[])
 	// Populate linked list of messages. Return numbers of messages for the user
 	num_msg = create_database(&head, &tail, username); 
 	// Send result to the client
-	if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg), 0)) == -1) {
+	if ((count = SSL_write(ssl, &num_msg, sizeof(num_msg))) == -1) {
 		perror("Send error\n");
 		exit(EXIT_FAILURE);
 	}
@@ -136,7 +137,7 @@ int main(int argc, char* argv[])
 		// READ command action - retrieve next message for user if available
 		if (strncmp(command, read_cmd, sizeof(read_cmd)) == 0 && strlen(rest) == 0) {
 			if ((n = read_next_message(&head, &cursur, username, buffer)) == 1) {
-				count = SSL_write(ssl, buffer, BUFFER_SIZE, 0);
+				count = SSL_write(ssl, buffer, BUFFER_SIZE);
 
 				if (count < 0) {
 					perror("Send error.");
@@ -186,7 +187,7 @@ int main(int argc, char* argv[])
 					exit(EXIT_FAILURE);
 				}
 			}else {
-				count = SSL_write(ssl, "MESSAGE FAILED", sizeof("MESSAGE FAILED"), 0);
+				count = SSL_write(ssl, "MESSAGE FAILED", sizeof("MESSAGE FAILED"));
 				if (count < 0) {
 					perror("Send error.");
 					save_database(&head); // Save messages
@@ -195,7 +196,7 @@ int main(int argc, char* argv[])
 			}
 		} else { // Bad command received
 			strcpy(buffer, "ERROR");
-			count = SSL_write(ssl, buffer, BUFFER_SIZE, 0);
+			count = SSL_write(ssl, buffer, BUFFER_SIZE);
 			if (count < 0) {
 				perror("Send error.");
 				save_database(&head); // Save messages
@@ -207,13 +208,12 @@ int main(int argc, char* argv[])
     
 	save_database(&head);
 	// closing the sockets
- SSL_shutdown(ssl);
- SSL_free(ssl);
- close(client);
+	SSL_shutdown(ssl);
+	SSL_free(ssl);
 	close(client_fd);
 	close(server_fd);
- SSL_CTX_free(ctx);
- EVP_cleanup();
+	SSL_CTX_free(ctx);
+	EVP_cleanup();
 
 	return 0;
 }
