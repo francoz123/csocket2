@@ -58,6 +58,7 @@ int main(int argc, char const* argv[])
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
     SSL_library_init();
+    OPENSSL_config(NULL);
 
     auth_token_t *auth_ptr = &auth; // Holds username and password
     printf("Welcome! Please login or register to interract with the server\n");
