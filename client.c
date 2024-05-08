@@ -85,11 +85,33 @@ int main(int argc, char const* argv[])
         printf("Failed to create the SSL_CTX\n");
         //goto end;
     }
+
+/* Cannot fail ??? */
+SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, verify_callback);
+
+/* Cannot fail ??? */
+SSL_CTX_set_verify_depth(ctx, 4);
+
+/* Cannot fail ??? */
+const long flags = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
+SSL_CTX_set_options(ctx, flags);
+
+res = SSL_CTX_load_verify_locations(ctx, "random-org-chain.pem", NULL);
+if(!(1 == res)) handleFailure();
     SSL *ssl = SSL_new(ctx);
     if (ssl == NULL) {
         printf("Failed to create the SSL object\n");
         //goto end;
     }    
+
+const char PREFERRED_CIPHERS[] = "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4";
+res = SSL_set_cipher_list(ssl, PREFERRED_CIPHERS);
+if(!(1 == res)) handleFailure();
+
+/* Step 2: verify the result of chain verification */
+/* Verification performed according to RFC 4158    */
+res = SSL_get_verify_result(ssl);
+if(!(X509_V_OK == res)) handleFailure();
 
     SSL_set_fd (ssl, client_fd);
     SSL_connect (ssl);
