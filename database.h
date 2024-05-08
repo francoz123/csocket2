@@ -299,4 +299,21 @@ void add_user(char *username, char *password)
 
     fclose (fd);
 }
+
+/**
+ * Creates a message struct pointer
+ * @param sender char*
+ * @param msg char* 
+ * @param recipient char* recipient of the message
+ * @param type msg_type
+ * @return message_t
+ */
+message_t* create_message(char* sender, char* recipient, char* msg, msg_t mt){
+        message_t* message = (message_t*)malloc(sizeof(message_t));
+        strcpy(message->sender, sender);
+        strcpy(message->recipient, recipient);
+        strcpy((*head)->message->message, msg);
+        message->type = mt;
+        return message;
+}
 #endif
