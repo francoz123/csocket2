@@ -11,10 +11,10 @@
 #ifndef DATABASE
 #define DATABASE
 
-enum message_type {notification, messaage};
+typedef enum message_type {notification, messaage} msg_type;
 
 typedef struct {
-    enum message_type type;
+    msg_type type;
     char sender[256];
     char recipient[256];
     char message[1024];
