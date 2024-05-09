@@ -30,6 +30,8 @@ typedef struct {
     char password[256];
 } user_t;
 
+message_t* create_message(char* sender, char* recipient, char* msg, msg_t mt);
+
 /**
  * Fetches messages from a file and populates message linked list
  * @param head pointer to the head pointer
@@ -58,19 +60,22 @@ int create_database(message_node_t **head, message_node_t **tail, char *username
 
         if (!(*head)) {
             *head = *tail = (message_node_t*)malloc(sizeof(message_node_t));
-            (*head)->message = (message_t*)malloc(sizeof(message_t));
+            (*head)->message = create_message(message.sender, message.recipient, message.message, message.type);
+
+            /*(*head)->message = (message_t*)malloc(sizeof(message_t));
             strcpy((*head)->message->sender, message.sender);
             strcpy((*head)->message->recipient, message.recipient);
-            strcpy((*head)->message->message, message.message);
+            strcpy((*head)->message->message, message.message);*/
             (*head)->next = NULL;
             continue;
         }
 
         message_node_t *temp = (message_node_t*)malloc(sizeof(message_node_t));
-        temp->message = (message_t*)malloc(sizeof(message_t));
-        strcpy(temp->message->sender, message.sender);
+        temp->message = create_message(message.sender, message.recipient, message.message, message.type);
+
+        /*strcpy(temp->message->sender, message.sender);
         strcpy(temp->message->recipient, message.recipient);
-        strcpy(temp->message->message, message.message);
+        strcpy(temp->message->message, message.message);*/
         temp->next = 0;
         (*tail)->next = temp;
         (*tail) = temp;
