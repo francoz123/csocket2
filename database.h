@@ -15,7 +15,7 @@ typedef enum message_type {notification, messaage} msg_type;
 
 typedef struct {
     char username[256];
-    char p_key[256];
+    unsigned char p_key[256];
 } key_t;
 
 typedef struct {
