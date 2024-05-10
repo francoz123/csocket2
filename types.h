@@ -7,7 +7,12 @@ typedef struct sockaddr* socket_address_ptr;
 typedef enum /* authentication_type */ {login, signup} auth_type;
 typedef enum {authentication, command, message} request_type;
 typedef enum {read, compose} command_type;
-typedef enum message_type {notification, messaage};
+typedef enum message_type {notification, messaage} msg_t;
+
+typedef struct {
+    char username[256];
+    unsigned char p_key[256];
+} key_t;
 
 typedef struct auth_token{
 	auth_type type;

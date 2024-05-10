@@ -13,6 +13,9 @@
 #ifndef DATABASE
 #define DATABASE
 
+
+message_t* create_message(char* sender, char* recipient, char* msg, msg_t mt);
+
 /**
  * Fetches messages from a file and populates message linked list
  * @param head pointer to the head pointer
@@ -41,19 +44,13 @@ int create_database(message_node_t **head, message_node_t **tail, char *username
 
         if (!(*head)) {
             *head = *tail = (message_node_t*)malloc(sizeof(message_node_t));
-            (*head)->message = (message_t*)malloc(sizeof(message_t));
-            strcpy((*head)->message->sender, message.sender);
-            strcpy((*head)->message->recipient, message.recipient);
-            strcpy((*head)->message->message, message.message);
+            (*head)->message = create_message(message.sender, message.recipient, message.message, message.type);
             (*head)->next = NULL;
             continue;
         }
 
         message_node_t *temp = (message_node_t*)malloc(sizeof(message_node_t));
-        temp->message = (message_t*)malloc(sizeof(message_t));
-        strcpy(temp->message->sender, message.sender);
-        strcpy(temp->message->recipient, message.recipient);
-        strcpy(temp->message->message, message.message);
+        temp->message = create_message(message.sender, message.recipient, message.message, message.type);
         temp->next = 0;
         (*tail)->next = temp;
         (*tail) = temp;
@@ -98,6 +95,30 @@ message_node_t* create_node(){
     node->next = 0;
     return node;
 }
+
+/**
+ * Fetches message for the user from message queue
+ * @param head pointer to the head pointer
+ * @param tail pointer to the tail pointer
+ * @param cursur pointer to temporary pointer for fetching messages
+ * @param username
+ * @param msg message_t **
+ * @return int 1 for success, -1 for failure
+ */
+int read_next_message(message_node_t **head, message_node_t **cursur, char *username, message_node_t **msg) 
+{
+    *cursur = *head;
+    while (*cursur && strcmp((*cursur)->message->recipient, username) != 0) {
+        *cursur = (*cursur)->next;
+    }
+
+    if (*cursur) {// Copy message details to buffer and send to client
+        *msg = (*cursur)->message;
+        return 1;
+    }
+    return -1;
+}
+
 
 /**
  * Fetches message for the user from message queue
@@ -227,6 +248,29 @@ int save_message(char* sender, char* recipient, char buffer[], message_node_t** 
 }
 
 /**
+ * Saves message to the database (Linked list)
+ * @param sender char* sender
+ * @param recipient char* recipient of the message
+ * @param buffer message to be stored
+ * @param head pointer to the head pointer
+ * @param tail pointer to the tail pointer
+ * @return void
+ */
+void save_message2(message_t** message, message_node_t** head, message_node_t **tail){
+    if (!(*head)) {
+        *head = *tail = create_node();
+        (*head)->message = *message;
+    }else {
+        message_node_t *temp = create_node();
+        temp->message = *message;
+        temp->next = 0;
+        (*tail)->next = temp;
+        (*tail) = temp;
+        temp = 0;
+    }
+}
+
+/**
  * Attempta to dfind a user from the database 
  * @param username char* 
  * @param password char* 
@@ -281,5 +325,22 @@ void add_user(char *username, char *password)
     }
 
     fclose (fd);
+}
+
+/**
+ * Creates a message struct pointer
+ * @param sender char*
+ * @param msg char* 
+ * @param recipient char* recipient of the message
+ * @param type msg_type
+ * @return message_t
+ */
+message_t* create_message(char* sender, char* recipient, char* msg, msg_t mt){
+        message_t* message = (message_t*)malloc(sizeof(message_t));
+        strcpy(message->sender, sender);
+        strcpy(message->recipient, recipient);
+        strcpy(message->message, msg);
+        message->type = mt;
+        return message;
 }
 #endif
