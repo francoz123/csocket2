@@ -8,27 +8,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "types.h"
+
 #ifndef DATABASE
 #define DATABASE
-
-enum message_type {notification, messaage};
-
-typedef struct {
-    enum message_type type;
-    char sender[256];
-    char recipient[256];
-    char message[1024];
-} message_t;
-
-typedef struct message_node{   
-    message_t *message;
-    struct message_node *next;
-} message_node_t;
-
-typedef struct {
-    char username[256];
-    char password[256];
-} user_t;
 
 /**
  * Fetches messages from a file and populates message linked list

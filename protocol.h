@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#include "types.h"
+
 #ifndef PROTOCOL_HEADER
 #define PROTOCOL_HEADER
 //#define PORT 1234
@@ -19,14 +21,6 @@
 
 typedef struct sockaddr_in socket_server_address;
 typedef struct sockaddr* socket_address_ptr;
-
-typedef enum authentication_type {login, signup} auth_type;
-
-typedef struct auth_token {
-	auth_type type;
-	char username[256];
-	char password[256];
-}auth_token_t ;
 
 /**
  * Creates a socket
